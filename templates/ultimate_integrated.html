@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Ultimate PDF Editor - Professional Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .tools {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tool-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .tool-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .tool-btn.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .tool-btn:not(.active) {
+            background: white;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            min-height: calc(100vh - 100px);
+        }
+
+        .editor-area {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 12px;
+            padding: 60px 20px;
+            text-align: center;
+            background: #fafafa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #e3f2fd;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 16px;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            font-size: 14px;
+            color: #999;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* PDF Viewer */
+        .pdf-container {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+        }
+
+        .pdf-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .page-navigation {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-btn {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background: #f0f0f0;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .pdf-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .generate-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .generate-btn:hover {
+            background: #218838;
+        }
+
+        .reset-btn {
+            background: #6c757d;
+            color: white;
+        }
+
+        .reset-btn:hover {
+            background: #545b62;
+        }
+
+        /* Canvas Area */
+        .canvas-container {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            position: relative;
+            overflow: auto;
+            background: #f9f9f9;
+            min-height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page-image {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 4px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            cursor: crosshair;
+            position: relative;
+        }
+
+        /* Brush Settings */
+        .brush-settings {
+            margin-bottom: 20px;
+        }
+
+        .brush-settings h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .setting-group {
+            margin-bottom: 15px;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .size-slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .size-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        .size-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        /* Text Editor Sidebar */
+        .text-editor-sidebar {
+            display: none;
+        }
+
+        .text-editor-sidebar.active {
+            display: block;
+        }
+
+        .sidebar-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .sidebar-section:last-child {
+            border-bottom: none;
+        }
+
+        .sidebar-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .font-controls {
+            display: grid;
+            gap: 15px;
+        }
+
+        .font-controls select,
+        .font-controls input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .style-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .style-btn {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .style-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .style-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .color-picker-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .color-picker {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        /* OCR Editor Sidebar */
+        .ocr-editor-sidebar {
+            display: none;
+        }
+
+        .ocr-editor-sidebar.active {
+            display: block;
+        }
+
+        .detect-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .detect-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .ocr-elements {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+        }
+
+        .ocr-element {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ocr-element:hover {
+            background: #f8f9fa;
+        }
+
+        .ocr-element.selected {
+            background: #e3f2fd;
+            border-left: 4px solid #667eea;
+        }
+
+        .ocr-text {
+            font-weight: 500;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+
+        .ocr-info {
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .confidence-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 10px;
+        }
+
+        .confidence-high {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .confidence-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .confidence-low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background: #e3f2fd;
+            color: #0d47a1;
+            border: 1px solid #bbdefb;
+        }
+
+        /* Loading States */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .sidebar {
+                max-height: none;
+                order: -1;
+            }
+
+            .header-content {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .tools {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 10px;
+            }
+
+            .pdf-controls {
+                flex-direction: column;
+                gap: 15px;
+                align-items: stretch;
+            }
+
+            .page-navigation {
+                justify-content: center;
+            }
+
+            .tools {
+                gap: 5px;
+            }
+
+            .tool-btn {
+                font-size: 12px;
+                padding: 8px 12px;
+            }
+        }
+
+        /* Edit Overlay */
+        .edit-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-dialog {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .edit-dialog h3 {
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        .edit-textarea {
+            width: 100%;
+            height: 120px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            resize: vertical;
+            font-family: inherit;
+            margin-bottom: 16px;
+        }
+
+        .edit-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .edit-save-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .edit-cancel-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* Draggable Text Overlay */
+        .draggable-text-overlay {
+            position: absolute;
+            background-color: rgba(255, 255, 0, 0.3);
+            border: 2px solid #ffaa00;
+            border-radius: 3px;
+            cursor: move;
+            z-index: 1001;
+            user-select: none;
+            font-size: 12px;
+            font-weight: normal;
+            color: #000;
+            padding: 2px 6px;
+        }
+
+        .draggable-text-overlay.embedded {
+            background-color: rgba(0, 255, 0, 0.3);
+            border: 2px solid #00ff00;
+            cursor: default;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">🎯 Ultimate PDF Editor</div>
+            <div class="tools">
+                <button class="tool-btn" id="brush-tool" onclick="selectTool('brush')">
+                    🖌️ Brush Erase
+                </button>
+                <button class="tool-btn" id="text-tool" onclick="selectTool('text')">
+                    📝 Add Text
+                </button>
+                <button class="tool-btn" id="ocr-tool" onclick="selectTool('ocr')">
+                    🔍 Select Text
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Editor Area -->
+        <div class="editor-area">
+            <!-- Upload Area -->
+            <div class="upload-area" id="upload-area">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">Drop your PDF here or click to browse</div>
+                <div class="upload-subtext">Supports PDF files up to 50MB</div>
+                <input type="file" class="file-input" id="file-input" accept=".pdf">
+            </div>
+
+            <!-- PDF Container -->
+            <div class="pdf-container" id="pdf-container">
+                <!-- PDF Controls -->
+                <div class="pdf-controls">
+                    <div class="page-navigation">
+                        <button class="page-btn" id="prev-page" onclick="changePage(-1)">‹ Previous</button>
+                        <span class="page-info" id="page-info">Page 1 of 1</span>
+                        <button class="page-btn" id="next-page" onclick="changePage(1)">Next ›</button>
+                    </div>
+                    <div class="pdf-actions">
+                        <button class="action-btn generate-btn" onclick="generatePDF()">📄 Generate PDF</button>
+                        <button class="action-btn reset-btn" onclick="resetSession()">🔄 Reset</button>
+                    </div>
+                </div>
+
+                <!-- Canvas Container -->
+                <div class="canvas-container" id="canvas-container">
+                    <img class="page-image" id="page-image" alt="PDF Page">
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div>Processing PDF...</div>
+            </div>
+
+            <!-- Status Messages -->
+            <div class="status-message" id="status-message"></div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Brush Settings -->
+            <div class="brush-settings" id="brush-settings">
+                <h3>🖌️ Brush Settings</h3>
+                <div class="setting-group">
+                    <label for="brush-size">Brush Size:</label>
+                    <div class="slider-container">
+                        <input type="range" class="size-slider" id="brush-size" min="5" max="50" value="20">
+                        <span class="size-value" id="brush-size-value">20</span>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <p style="font-size: 14px; color: #666; margin-top: 10px;">
+                        Click on the PDF to erase content. The red circle shows the brush area.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Text Editor Sidebar -->
+            <div class="text-editor-sidebar" id="text-editor-sidebar">
+                <div class="sidebar-section">
+                    <h3>📝 Add Text</h3>
+                    <textarea class="text-input" id="text-content" placeholder="Enter your text here..."></textarea>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>🔤 Font Settings</h3>
+                    <div class="font-controls">
+                        <div>
+                            <label>Font Family:</label>
+                            <select id="font-family">
+                                <option value="Arial">Arial</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Courier New">Courier New</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Verdana">Verdana</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Font Size:</label>
+                            <input type="number" id="font-size" min="8" max="72" value="16">
+                        </div>
+                        <div>
+                            <label>Text Style:</label>
+                            <div class="style-buttons">
+                                <button class="style-btn" id="bold-btn" onclick="toggleStyle('bold')">B</button>
+                                <button class="style-btn" id="italic-btn" onclick="toggleStyle('italic')">I</button>
+                                <button class="style-btn" id="underline-btn" onclick="toggleStyle('underline')">U</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>🎨 Colors</h3>
+                    <div class="color-picker-group">
+                        <label>Text Color:</label>
+                        <input type="color" class="color-picker" id="text-color" value="#000000">
+                    </div>
+                    <div class="color-picker-group" style="margin-top: 10px;">
+                        <label>Background:</label>
+                        <input type="color" class="color-picker" id="bg-color" value="#FFFFFF">
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <p style="font-size: 14px; color: #666;">
+                        Click anywhere on the PDF to add text at that location.
+                    </p>
+                </div>
+            </div>
+
+            <!-- OCR Editor Sidebar -->
+            <div class="ocr-editor-sidebar" id="ocr-editor-sidebar">
+                <button class="detect-btn" onclick="detectText()">🔍 Detect Text in PDF</button>
+                
+                <div class="sidebar-section">
+                    <h3>📋 Detected Text</h3>
+                    <div class="ocr-elements" id="ocr-elements">
+                        <div style="padding: 20px; text-align: center; color: #666;">
+                            Click "Detect Text" to scan the PDF for editable text.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>📊 Statistics</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center;">
+                        <div>
+                            <div style="font-size: 24px; color: #667eea; font-weight: bold;" id="total-ocr-elements">0</div>
+                            <div style="font-size: 12px; color: #666;">Total Elements</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 24px; color: #28a745; font-weight: bold;" id="modified-ocr-elements">0</div>
+                            <div style="font-size: 12px; color: #666;">Modified</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Overlay -->
+    <div class="edit-overlay" id="edit-overlay">
+        <div class="edit-dialog">
+            <h3>✏️ Edit Text</h3>
+            <textarea class="edit-textarea" id="edit-textarea" placeholder="Edit the text..."></textarea>
+            <div class="edit-actions">
+                <button class="edit-save-btn" onclick="saveEdit()">💾 Save</button>
+                <button class="edit-cancel-btn" onclick="cancelEdit()">❌ Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentTool = 'brush';
+        let sessionId = null;
+        let currentPage = 0;
+        let totalPages = 0;
+        let isUploading = false;
+        let selectedOCRElement = null;
+        let editingElementId = null;
+        let ocrElements = [];
+        let brushPreview = null; // Brush outline preview
+        let addedTextElements = []; // Track added text elements
+        let isDrawing = false;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            selectTool('brush');
+        });
+
+        function setupEventListeners() {
+            // File upload
+            const uploadArea = document.getElementById('upload-area');
+            const fileInput = document.getElementById('file-input');
+
+            uploadArea.addEventListener('click', () => fileInput.click());
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('dragleave', handleDragLeave);
+            uploadArea.addEventListener('drop', handleDrop);
+            fileInput.addEventListener('change', handleFileSelect);
+
+            // Brush size slider
+            const brushSize = document.getElementById('brush-size');
+            const brushSizeValue = document.getElementById('brush-size-value');
+            brushSize.addEventListener('input', (e) => {
+                brushSizeValue.textContent = e.target.value;
+            });
+
+            // Page image click
+            const pageImage = document.getElementById('page-image');
+            pageImage.addEventListener('click', handleImageClick);
+            pageImage.addEventListener('mousemove', handleMouseMove);
+            pageImage.addEventListener('mouseleave', handleMouseLeave);
+
+            // Edit overlay
+            document.getElementById('edit-overlay').addEventListener('click', (e) => {
+                if (e.target.id === 'edit-overlay') {
+                    cancelEdit();
+                }
+            });
+        }
+
+        // Tool selection
+        function selectTool(tool) {
+            currentTool = tool;
+            
+            // Update tool buttons
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tool + '-tool').classList.add('active');
+            
+            // Update sidebar
+            document.getElementById('brush-settings').style.display = tool === 'brush' ? 'block' : 'none';
+            document.getElementById('text-editor-sidebar').className = 'text-editor-sidebar' + (tool === 'text' ? ' active' : '');
+            document.getElementById('ocr-editor-sidebar').className = 'ocr-editor-sidebar' + (tool === 'ocr' ? ' active' : '');
+            
+            // Update cursor
+            const pageImage = document.getElementById('page-image');
+            if (pageImage) {
+                pageImage.style.cursor = tool === 'brush' ? 'crosshair' : 
+                                      tool === 'text' ? 'text' : 'pointer';
+            }
+        }
+
+        // File handling
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadFile(files[0]);
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                uploadFile(file);
+            }
+        }
+
+        async function uploadFile(file) {
+            if (!file.type.includes('pdf')) {
+                showMessage('Please select a PDF file.', 'error');
+                return;
+            }
+
+            if (isUploading) return;
+            isUploading = true;
+
+            showLoading(true);
+            showMessage('Uploading and processing PDF...', 'info');
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    sessionId = result.session_id;
+                    totalPages = result.total_pages;
+                    currentPage = 0;
+
+                    // Update UI
+                    document.getElementById('upload-area').style.display = 'none';
+                    document.getElementById('pdf-container').style.display = 'flex';
+                    document.getElementById('page-image').src = result.page_image;
+                    updatePageInfo();
+
+                    // Update OCR elements
+                    if (result.ocr_state && result.ocr_state.text_elements) {
+                        ocrElements = result.ocr_state.text_elements;
+                        updateOCRElements();
+                    }
+
+                    showMessage(result.message, 'success');
+                } else {
+                    showMessage(result.detail || 'Upload failed', 'error');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showMessage('Upload failed: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+                isUploading = false;
+            }
+        }
+
+        // Page navigation
+        function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage >= 0 && newPage < totalPages) {
+                loadPage(newPage);
+            }
+        }
+
+        async function loadPage(pageNum) {
+            if (!sessionId) return;
+
+            try {
+                const response = await fetch(`/change-page/${sessionId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ page: pageNum })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    currentPage = pageNum;
+                    document.getElementById('page-image').src = result.page_image;
+                    updatePageInfo();
+
+                    // Update OCR elements for this page
+                    if (result.ocr_elements) {
+                        ocrElements = result.ocr_elements;
+                        updateOCRElements();
+                    }
+                }
+            } catch (error) {
+                console.error('Page change error:', error);
+            }
+        }
+
+        function updatePageInfo() {
+            const pageInfo = document.getElementById('page-info');
+            pageInfo.textContent = `Page ${currentPage + 1} of ${totalPages}`;
+
+            document.getElementById('prev-page').disabled = currentPage === 0;
+            document.getElementById('next-page').disabled = currentPage === totalPages - 1;
+        }
+
+        // Image interaction
+        function handleImageClick(e) {
+            if (!sessionId) return;
+
+            const rect = e.target.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width;
+            const y = (e.clientY - rect.top) / rect.height;
+
+            if (currentTool === 'brush') {
+                applyBrushErase(x, y);
+            } else if (currentTool === 'text') {
+                addText(x, y);
+            } else if (currentTool === 'ocr') {
+                selectOCRElement(x, y);
+            }
+        }
+
+        function handleMouseMove(e) {
+            if (currentTool !== 'brush') return;
+
+            // Show brush preview
+            const pageContainer = e.target.closest('.canvas-container');
+            if (pageContainer) {
+                showBrushPreview(e, pageContainer);
+            }
+        }
+
+        function handleMouseLeave(e) {
+            // Hide brush preview
+            hideBrushPreview();
+        }
+
+        // Brush preview functions
+        function showBrushPreview(e, pageContainer) {
+            // Remove existing preview
+            hideBrushPreview();
+            
+            // Get brush size and match it exactly to backend calculation
+            const brushSize = parseInt(document.getElementById('brush-size').value) || 20;
+            // Backend calculation: img_brush_size = brush_size * 2
+            // Then: cv2.circle(mask, (x, y), img_brush_size, 255, -1)
+            // So radius = brush_size * 2, diameter = brush_size * 4
+            const circleSize = brushSize * 4;
+            
+            // Get mouse position relative to the page
+            const rect = pageContainer.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Create lighter red circle that matches actual erase area
+            brushPreview = document.createElement('div');
+            brushPreview.style.position = 'absolute';
+            brushPreview.style.left = (x - circleSize/2) + 'px';
+            brushPreview.style.top = (y - circleSize/2) + 'px';
+            brushPreview.style.width = circleSize + 'px';
+            brushPreview.style.height = circleSize + 'px';
+            brushPreview.style.border = '1px solid rgba(255, 0, 0, 0.6)';
+            brushPreview.style.borderRadius = '50%';
+            brushPreview.style.pointerEvents = 'none';
+            brushPreview.style.zIndex = '1000';
+            
+            // Add to page container
+            pageContainer.appendChild(brushPreview);
+        }
+        
+        function hideBrushPreview() {
+            if (brushPreview && brushPreview.parentNode) {
+                brushPreview.remove();
+                brushPreview = null;
+            }
+        }
+
+        // Brush erase
+        async function applyBrushErase(x, y) {
+            const brushSize = parseInt(document.getElementById('brush-size').value);
+
+            try {
+                const response = await fetch(`/brush-erase/${sessionId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        page: currentPage,
+                        x: x,
+                        y: y,
+                        brush_size: brushSize
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('page-image').src = result.page_image;
+                    
+                    // Show visual feedback for erasing
+                    if (brushPreview) {
+                        brushPreview.style.background = 'rgba(255, 0, 0, 0.4)';
+                        brushPreview.style.border = '3px solid #ff0000';
+                        brushPreview.style.boxShadow = '0 0 15px rgba(255, 0, 0, 0.8)';
+                        
+                        // Reset after a short delay
+                        setTimeout(() => {
+                            if (brushPreview) {
+                                brushPreview.style.background = 'rgba(255, 0, 0, 0.2)';
+                                brushPreview.style.boxShadow = '0 0 10px rgba(255, 0, 0, 0.5)';
+                            }
+                        }, 200);
+                    }
+                    
+                    showMessage(result.message, 'success');
+                } else {
+                    showMessage(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Brush erase error:', error);
+                showMessage('Failed to apply brush erase', 'error');
+            }
+        }
+
+        // Add text
+        async function addText(x, y) {
+            const text = document.getElementById('text-content').value.trim();
+            if (!text) {
+                showMessage('Please enter some text first', 'error');
+                return;
+            }
+
+            const styling = {
+                font_family: document.getElementById('font-family').value,
+                font_size: parseInt(document.getElementById('font-size').value),
+                color: document.getElementById('text-color').value,
+                font_weight: document.getElementById('bold-btn').classList.contains('active') ? 'bold' : 'normal',
+                font_style: document.getElementById('italic-btn').classList.contains('active') ? 'italic' : 'normal',
+                text_decoration: document.getElementById('underline-btn').classList.contains('active') ? 'underline' : 'none'
+            };
+
+            // Create draggable text overlay first
+            createDraggableTextOverlay(currentPage, text, x, y, styling);
+            
+            // Clear the text input
+            document.getElementById('text-content').value = '';
+        }
+
+        // Draggable text functions
+        function createDraggableTextOverlay(pageNum, text, x, y, styling = {}) {
+            const pageContainer = document.querySelector('.canvas-container');
+            const img = pageContainer.querySelector('.page-image');
+            const rect = img.getBoundingClientRect();
+            
+            // Create draggable text overlay
+            const textOverlay = document.createElement('div');
+            textOverlay.className = 'draggable-text-overlay';
+            textOverlay.dataset.pageNum = pageNum;
+            textOverlay.dataset.text = text;
+            textOverlay.style.position = 'absolute';
+            textOverlay.style.left = (x * rect.width) + 'px';
+            textOverlay.style.top = (y * rect.height) + 'px';
+            textOverlay.style.padding = '2px 6px';
+            textOverlay.style.background = 'rgba(255, 255, 0, 0.3)';
+            textOverlay.style.border = '2px solid #ffaa00';
+            textOverlay.style.borderRadius = '3px';
+            textOverlay.style.cursor = 'move';
+            textOverlay.style.zIndex = '1001';
+            textOverlay.style.fontSize = (styling.font_size || 12) + 'px';
+            textOverlay.style.fontWeight = styling.font_weight === 'bold' ? 'bold' : 'normal';
+            textOverlay.style.color = styling.color || '#000';
+            textOverlay.style.userSelect = 'none';
+            textOverlay.style.fontFamily = styling.font_family || 'Arial, sans-serif';
+            textOverlay.textContent = text;
+            textOverlay.title = 'Drag to position text, then click to embed';
+            
+            // Add drag functionality
+            makeDraggable(textOverlay, pageContainer, text, pageNum, styling);
+            
+            pageContainer.appendChild(textOverlay);
+            addedTextElements.push({
+                element: textOverlay,
+                text: text,
+                pageNum: pageNum,
+                embedded: false,
+                styling: styling
+            });
+        }
+        
+        function makeDraggable(element, container, text, pageNum, styling = {}) {
+            let isDragging = false;
+            let startX, startY, startLeft, startTop;
+            
+            element.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startLeft = parseInt(element.style.left);
+                startTop = parseInt(element.style.top);
+                
+                element.style.opacity = '0.7';
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const deltaX = e.clientX - startX;
+                const deltaY = e.clientY - startY;
+                
+                element.style.left = (startLeft + deltaX) + 'px';
+                element.style.top = (startTop + deltaY) + 'px';
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    element.style.opacity = '1';
+                    
+                    // Update coordinates
+                    const img = container.querySelector('.page-image');
+                    const rect = img.getBoundingClientRect();
+                    const newX = parseInt(element.style.left) / rect.width;
+                    const newY = parseInt(element.style.top) / rect.height;
+                    
+                    showMessage(`Text positioned at (${newX.toFixed(2)}, ${newY.toFixed(2)}) - Click to embed`, 'info');
+                }
+            });
+            
+            // Add click to embed functionality
+            element.addEventListener('click', (e) => {
+                if (!isDragging) {
+                    embedTextAtPosition(element, container, text, pageNum, styling);
+                }
+            });
+        }
+        
+        function embedTextAtPosition(element, container, text, pageNum, styling = {}) {
+            const img = container.querySelector('.page-image');
+            const rect = img.getBoundingClientRect();
+            const x = parseInt(element.style.left) / rect.width;
+            const y = parseInt(element.style.top) / rect.height;
+            
+            // Check if text is already embedded
+            const textElement = addedTextElements.find(item => item.element === element);
+            if (textElement && textElement.embedded) {
+                showMessage('Text already embedded!', 'warning');
+                return;
+            }
+            
+            // Add text to backend with styling
+            addTextToBackend(pageNum, text, x, y, styling);
+            
+            // Mark as embedded and change appearance
+            element.classList.add('embedded');
+            element.title = 'Text embedded - Right click to delete';
+            
+            // Add right-click delete functionality
+            element.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                deleteTextElement(element, pageNum);
+            });
+            
+            // Find and update the tracking object
+            if (textElement) {
+                textElement.embedded = true;
+            }
+            
+            showMessage('Text embedded successfully!', 'success');
+        }
+        
+        async function addTextToBackend(pageNum, text, x, y, styling = {}) {
+            try {
+                const response = await fetch(`/add-text/${sessionId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        page: pageNum,
+                        x: x,
+                        y: y,
+                        text: text,
+                        styling: styling
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('page-image').src = result.page_image;
+                    showMessage('Text added successfully!', 'success');
+                } else {
+                    showMessage(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Add text error:', error);
+                showMessage('Failed to add text', 'error');
+            }
+        }
+        
+        function deleteTextElement(element, pageNum) {
+            // Remove from DOM
+            element.remove();
+            
+            // Remove from tracking array
+            const index = addedTextElements.findIndex(item => item.element === element);
+            if (index > -1) {
+                addedTextElements.splice(index, 1);
+            }
+            
+            showMessage('Text element deleted', 'info');
+        }
+
+        // Text styling
+        function toggleStyle(style) {
+            const btn = document.getElementById(style + '-btn');
+            btn.classList.toggle('active');
+        }
+
+        // OCR functionality
+        async function detectText() {
+            if (!sessionId) return;
+
+            showMessage('Detecting text in PDF...', 'info');
+
+            try {
+                // Trigger OCR detection (this would be implemented in the backend)
+                showMessage('Text detection completed!', 'success');
+                
+                // For now, display existing OCR elements
+                updateOCRElements();
+            } catch (error) {
+                console.error('OCR detection error:', error);
+                showMessage('Failed to detect text', 'error');
+            }
+        }
+
+        function updateOCRElements() {
+            const container = document.getElementById('ocr-elements');
+            
+            if (ocrElements.length === 0) {
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No text elements detected.</div>';
+                document.getElementById('total-ocr-elements').textContent = '0';
+                document.getElementById('modified-ocr-elements').textContent = '0';
+                return;
+            }
+
+            let html = '';
+            let modifiedCount = 0;
+
+            ocrElements.forEach(element => {
+                if (element.is_modified) modifiedCount++;
+
+                const confidence = Math.round(element.confidence * 100);
+                const confidenceClass = confidence >= 80 ? 'confidence-high' : 
+                                      confidence >= 50 ? 'confidence-medium' : 'confidence-low';
+
+                html += `
+                    <div class="ocr-element ${element.is_selected ? 'selected' : ''}" 
+                         onclick="selectOCRElementById('${element.id}')" 
+                         ondblclick="editOCRElement('${element.id}')">
+                        <div class="ocr-text">${escapeHtml(element.current_text)}</div>
+                        <div class="ocr-info">
+                            <span>Page ${element.page_num + 1}</span>
+                            <span class="confidence-badge ${confidenceClass}">${confidence}%</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            document.getElementById('total-ocr-elements').textContent = ocrElements.length;
+            document.getElementById('modified-ocr-elements').textContent = modifiedCount;
+        }
+
+        function selectOCRElement(x, y) {
+            // Find OCR element at position (simplified)
+            // In a full implementation, you'd check bounding boxes
+            if (ocrElements.length > 0) {
+                selectOCRElementById(ocrElements[0].id);
+            }
+        }
+
+        function selectOCRElementById(elementId) {
+            selectedOCRElement = elementId;
+            
+            // Update visual selection
+            ocrElements.forEach(elem => {
+                elem.is_selected = elem.id === elementId;
+            });
+            
+            updateOCRElements();
+        }
+
+        function editOCRElement(elementId) {
+            const element = ocrElements.find(elem => elem.id === elementId);
+            if (!element) return;
+
+            editingElementId = elementId;
+            document.getElementById('edit-textarea').value = element.current_text;
+            document.getElementById('edit-overlay').style.display = 'flex';
+        }
+
+        async function saveEdit() {
+            if (!editingElementId) return;
+
+            const newText = document.getElementById('edit-textarea').value.trim();
+            if (!newText) {
+                showMessage('Text cannot be empty', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/update-ocr-text/${sessionId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        element_id: editingElementId,
+                        new_text: newText
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update local element
+                    const element = ocrElements.find(elem => elem.id === editingElementId);
+                    if (element) {
+                        element.current_text = newText;
+                        element.is_modified = true;
+                    }
+
+                    document.getElementById('page-image').src = result.page_image;
+                    updateOCRElements();
+                    showMessage(result.message, 'success');
+                } else {
+                    showMessage(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('OCR update error:', error);
+                showMessage('Failed to update text', 'error');
+            }
+
+            cancelEdit();
+        }
+
+        function cancelEdit() {
+            editingElementId = null;
+            document.getElementById('edit-overlay').style.display = 'none';
+            document.getElementById('edit-textarea').value = '';
+        }
+
+        // PDF generation
+        async function generatePDF() {
+            if (!sessionId) return;
+
+            showLoading(true);
+            showMessage('Generating final PDF...', 'info');
+
+            try {
+                const response = await fetch(`/generate-pdf/${sessionId}`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage(result.message, 'success');
+                    
+                    // Trigger download
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = result.download_url;
+                    downloadLink.download = result.filename;
+                    downloadLink.click();
+                } else {
+                    showMessage(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('PDF generation error:', error);
+                showMessage('Failed to generate PDF', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Reset session
+        async function resetSession() {
+            if (!sessionId) return;
+
+            if (confirm('Are you sure you want to reset all changes?')) {
+                try {
+                    await fetch(`/cleanup/${sessionId}`, { method: 'POST' });
+                    
+                    // Reset UI
+                    sessionId = null;
+                    currentPage = 0;
+                    totalPages = 0;
+                    ocrElements = [];
+                    selectedOCRElement = null;
+                    editingElementId = null;
+
+                    document.getElementById('upload-area').style.display = 'block';
+                    document.getElementById('pdf-container').style.display = 'none';
+                    document.getElementById('file-input').value = '';
+
+                    updateOCRElements();
+                    showMessage('Session reset successfully', 'info');
+                } catch (error) {
+                    console.error('Reset error:', error);
+                    showMessage('Failed to reset session', 'error');
+                }
+            }
+        }
+
+        // Utility functions
+        function showMessage(message, type) {
+            const messageEl = document.getElementById('status-message');
+            messageEl.textContent = message;
+            messageEl.className = `status-message status-${type}`;
+            messageEl.style.display = 'block';
+
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 5000);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html> 
