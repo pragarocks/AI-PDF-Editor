@@ -211,4 +211,8 @@ For support, please open an issue on GitHub or contact the development team.
 
 ---
 
+<<<<<<< HEAD
 **Made with ❤️ for professional PDF editing** 
+=======
+**Made with ❤️ for professional PDF editing** 
+>>>>>>> cb9aebb3f1666c6335b59de7ca0e4299e2683c07
