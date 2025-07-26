@@ -50,11 +50,29 @@ class OCRTextElement:
         self.font_family = "Arial"  # Default, can be improved with font detection
         
     def _estimate_font_size(self) -> int:
-        """Estimate font size based on bounding box height"""
+        """Estimate font size based on bounding box height with better scaling"""
         height = self.bbox[3] - self.bbox[1]
+        width = self.bbox[2] - self.bbox[0]
+        
+        # Calculate text density (characters per unit area)
+        text_length = len(self.original_text.strip())
+        if text_length == 0:
+            return 16
+        
+        # More sophisticated size estimation based on text density and bounding box
+        area = height * width
+        density = text_length / max(area, 0.001)  # Avoid division by zero
+        
+        # Adjust scale factor based on text density
+        if density > 100:  # Dense text (small font)
+            scale_factor = 3000
+        elif density > 50:  # Medium density
+            scale_factor = 4000
+        else:  # Sparse text (large font)
+            scale_factor = 6000
+        
         # Convert normalized height to approximate pixel size
-        # This is a rough estimate, actual size depends on image resolution
-        estimated_size = max(8, min(72, int(height * 1000)))  # Scale factor
+        estimated_size = max(16, min(250, int(height * scale_factor)))
         return estimated_size
     
     def get_center(self) -> Tuple[float, float]:
@@ -507,14 +525,14 @@ class OCREditor:
     
     def render_clean_text_replacement(self, image: np.ndarray, page_num: int = 0) -> np.ndarray:
         """
-        Render clean text replacement without borders or backgrounds
+        Render edited text as overlays on top of the original text
         
         Args:
             image: Input image as numpy array
             page_num: Page number to render
             
         Returns:
-            Image with clean text replacements
+            Image with edited text overlays
         """
         # Convert numpy array to PIL Image
         if len(image.shape) == 3:
@@ -528,75 +546,196 @@ class OCREditor:
         # Get elements for this page
         elements = self.get_elements_by_page(page_num)
         
+        # Debug: Log how many elements we're checking
+        modified_count = 0
         for element in elements:
             # Only render modified elements (text that has been changed)
-            if element.is_modified and element.current_text != element.original_text:
+            if element.current_text != element.original_text:
+                modified_count += 1
+                logging.info(f"🔍 Rendering modified text: '{element.original_text}' -> '{element.current_text}'")
                 self._render_clean_text_replacement(draw, pil_image, element)
+        
+        logging.info(f"🔍 Total modified elements rendered: {modified_count}")
         
         # Convert back to numpy array
         if len(image.shape) == 3:
             return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
         else:
-            return np.array(pil_image)
-    
+            return np.array(pil_image.convert('L'))
+
     def _render_clean_text_replacement(self, draw: ImageDraw.Draw, image: Image.Image, element: OCRTextElement):
-        """Render clean text replacement without borders or backgrounds"""
+        """Render edited text as a perfect replacement that completely removes original text and replaces it seamlessly"""
         # Calculate position in pixels
         img_x1 = int(element.bbox[0] * image.width)
         img_y1 = int(element.bbox[1] * image.height)
         img_x2 = int(element.bbox[2] * image.width)
         img_y2 = int(element.bbox[3] * image.height)
         
-        # Sample background color from around the text area for seamless blending
-        sample_x = max(0, img_x1 - 5)
-        sample_y = max(0, img_y1 - 5)
-        try:
-            bg_pixel = image.getpixel((sample_x, sample_y))
-            bg_color = bg_pixel if isinstance(bg_pixel, tuple) else (255, 255, 255)
-        except:
-            bg_color = (255, 255, 255)  # Default white
-        
-        # Clean the old text area with a slightly larger area to remove artifacts
-        padding = 2
-        clean_x1 = max(0, img_x1 - padding)
-        clean_y1 = max(0, img_y1 - padding)
-        clean_x2 = min(image.width, img_x2 + padding)
-        clean_y2 = min(image.height, img_y2 + padding)
-        
-        # Fill with background color
-        draw.rectangle([clean_x1, clean_y1, clean_x2, clean_y2], fill=bg_color)
-        
-        # Calculate text size for proper font scaling
+        # Calculate bounding box dimensions
         bbox_width = img_x2 - img_x1
         bbox_height = img_y2 - img_y1
         
-        # Estimate appropriate font size based on bounding box height
-        estimated_font_size = max(8, min(int(bbox_height * 0.8), 32))
+        # STEP 1: Completely erase the original text area
+        # Create a white rectangle to cover the entire original text area
+        erase_padding = 2  # Slight padding to ensure complete coverage
+        erase_x1 = max(0, img_x1 - erase_padding)
+        erase_y1 = max(0, img_y1 - erase_padding)
+        erase_x2 = min(image.width, img_x2 + erase_padding)
+        erase_y2 = min(image.height, img_y2 + erase_padding)
+        
+        # Draw white rectangle to completely erase the original text
+        draw.rectangle([erase_x1, erase_y1, erase_x2, erase_y2], fill=(255, 255, 255))
+        
+        # STEP 2: Detect the original text color from surrounding areas
+        # Sample colors from areas around the text to get the document's text color
+        original_color = self._detect_text_color_from_surroundings(image, element.bbox)
+        
+        # STEP 3: Calculate perfect font size to match original text
+        # Use the original bounding box height as the target
+        target_height = bbox_height * 0.85  # 85% of bounding box height for text
+        
+        # Start with a reasonable font size and adjust
+        font_size = max(8, min(int(target_height), 150))
         
         # Get font
         try:
-            font = self._get_font(element.font_family, estimated_font_size)
+            font = self._get_font(element.font_family, font_size)
         except:
             font = ImageFont.load_default()
         
-        # Calculate text position for better placement
-        if element.current_text.strip():
-            # Get actual text dimensions
-            text_bbox = draw.textbbox((0, 0), element.current_text, font=font)
-            text_width = text_bbox[2] - text_bbox[0]
-            text_height = text_bbox[3] - text_bbox[1]
-            
-            # Position text centered in the original bounding box
-            text_x = img_x1 + (bbox_width - text_width) // 2
-            text_y = img_y1 + (bbox_height - text_height) // 2
-            
-            # Ensure text doesn't go outside image bounds
-            text_x = max(0, min(text_x, image.width - text_width))
-            text_y = max(0, min(text_y, image.height - text_height))
-            
-            # Draw new text with high quality (no outline, no background)
-            draw.text((text_x, text_y), element.current_text, fill=(0, 0, 0), font=font)
+        # Calculate text dimensions with current font
+        text_bbox = draw.textbbox((0, 0), element.current_text, font=font)
+        text_width = text_bbox[2] - text_bbox[0]
+        text_height = text_bbox[3] - text_bbox[1]
+        
+        # Fine-tune font size to match original text height precisely
+        if text_height > bbox_height * 0.95:
+            # Text too large, reduce font size
+            while text_height > bbox_height * 0.95 and font_size > 6:
+                font_size -= 1
+                try:
+                    font = self._get_font(element.font_family, font_size)
+                    text_bbox = draw.textbbox((0, 0), element.current_text, font=font)
+                    text_height = text_bbox[3] - text_bbox[1]
+                except:
+                    break
+        elif text_height < bbox_height * 0.6:
+            # Text too small, increase font size
+            while text_height < bbox_height * 0.6 and font_size < 150:
+                font_size += 1
+                try:
+                    font = self._get_font(element.font_family, font_size)
+                    text_bbox = draw.textbbox((0, 0), element.current_text, font=font)
+                    text_height = text_bbox[3] - text_bbox[1]
+                except:
+                    break
+        
+        # Recalculate final text dimensions
+        text_bbox = draw.textbbox((0, 0), element.current_text, font=font)
+        text_width = text_bbox[2] - text_bbox[0]
+        text_height = text_bbox[3] - text_bbox[1]
+        
+        # STEP 4: Position text to match the original text position exactly
+        # Center horizontally and vertically within the original bounding box
+        text_x = img_x1 + (bbox_width - text_width) // 2
+        text_y = img_y1 + (bbox_height - text_height) // 2
+        
+        # Ensure text doesn't go outside image bounds
+        text_x = max(0, min(text_x, image.width - text_width))
+        text_y = max(0, min(text_y, image.height - text_height))
+        
+        # STEP 5: Draw the new text with perfect color matching
+        # Use the detected original color for perfect matching
+        if original_color == (255, 255, 255) or original_color == (0, 0, 0):
+            # Fallback to a dark color that should match most documents
+            text_color = (30, 30, 30)  # Very dark gray, almost black
+        else:
+            text_color = original_color
+        
+        # Draw the text directly on the erased area
+        draw.text((text_x, text_y), element.current_text, fill=text_color, font=font)
+        
+        # Log the rendering details for debugging
+        logging.info(f"🎨 Perfect text replacement: '{element.current_text}' at ({text_x}, {text_y}) with color {text_color}, font size {font_size}")
     
+    def _detect_text_color_from_surroundings(self, image: Image.Image, bbox: List[float]) -> Tuple[int, int, int]:
+        """
+        Detect text color from surrounding areas to get the document's text color
+        """
+        try:
+            # Convert normalized coordinates to pixel coordinates
+            img_x1 = int(bbox[0] * image.width)
+            img_y1 = int(bbox[1] * image.height)
+            img_x2 = int(bbox[2] * image.width)
+            img_y2 = int(bbox[3] * image.height)
+            
+            # Sample colors from areas around the text (not from the text itself)
+            colors = []
+            
+            # Sample from left side
+            if img_x1 > 20:
+                for y in range(img_y1, img_y2, max(1, (img_y2 - img_y1) // 5)):
+                    try:
+                        pixel = image.getpixel((img_x1 - 10, y))
+                        if isinstance(pixel, tuple) and len(pixel) >= 3:
+                            r, g, b = pixel[:3]
+                            if r < 240 or g < 240 or b < 240:  # Not white
+                                colors.append((r, g, b))
+                    except:
+                        continue
+            
+            # Sample from right side
+            if img_x2 < image.width - 20:
+                for y in range(img_y1, img_y2, max(1, (img_y2 - img_y1) // 5)):
+                    try:
+                        pixel = image.getpixel((img_x2 + 10, y))
+                        if isinstance(pixel, tuple) and len(pixel) >= 3:
+                            r, g, b = pixel[:3]
+                            if r < 240 or g < 240 or b < 240:  # Not white
+                                colors.append((r, g, b))
+                    except:
+                        continue
+            
+            # Sample from above
+            if img_y1 > 20:
+                for x in range(img_x1, img_x2, max(1, (img_x2 - img_x1) // 5)):
+                    try:
+                        pixel = image.getpixel((x, img_y1 - 10))
+                        if isinstance(pixel, tuple) and len(pixel) >= 3:
+                            r, g, b = pixel[:3]
+                            if r < 240 or g < 240 or b < 240:  # Not white
+                                colors.append((r, g, b))
+                    except:
+                        continue
+            
+            # Sample from below
+            if img_y2 < image.height - 20:
+                for x in range(img_x1, img_x2, max(1, (img_x2 - img_x1) // 5)):
+                    try:
+                        pixel = image.getpixel((x, img_y2 + 10))
+                        if isinstance(pixel, tuple) and len(pixel) >= 3:
+                            r, g, b = pixel[:3]
+                            if r < 240 or g < 240 or b < 240:  # Not white
+                                colors.append((r, g, b))
+                    except:
+                        continue
+            
+            if not colors:
+                return (30, 30, 30)  # Default dark gray
+            
+            # Find the most common color
+            color_counts = {}
+            for color in colors:
+                color_counts[color] = color_counts.get(color, 0) + 1
+            
+            # Return the most frequent color
+            dominant_color = max(color_counts.items(), key=lambda x: x[1])[0]
+            return dominant_color
+            
+        except Exception as e:
+            logging.warning(f"Failed to detect text color from surroundings: {str(e)}")
+            return (30, 30, 30)  # Default dark gray
+
     def _render_single_ocr_element(self, draw: ImageDraw.Draw, image: Image.Image, element: OCRTextElement):
         """Render a single OCR text element with appropriate styling"""
         # Calculate position in pixels
@@ -636,8 +775,12 @@ class OCREditor:
         # Draw text if modified or editing (show current text)
         if element.is_modified or element.is_editing:
             try:
-                # Try to get appropriate font
-                font_size = max(8, min(48, element.estimated_font_size))
+                # Calculate font size using the same improved scaling logic
+                bbox_height = img_y2 - img_y1
+                base_font_size = element.estimated_font_size
+                scale_factor = bbox_height / (base_font_size * 0.6)  # More aggressive scaling
+                font_size = max(16, min(int(base_font_size * scale_factor), 200))
+                
                 font = self._get_font(element.font_family, font_size)
                 
                 # Calculate text position (centered in bbox)
@@ -680,11 +823,32 @@ class OCREditor:
             return self.font_cache[cache_key]
         
         try:
-            # Try to load system font (simplified for now)
-            font = ImageFont.load_default()
+            # Try to load better system fonts in order of preference
+            font_paths = [
+                "arial.ttf",  # Windows Arial
+                "Arial.ttf",  # Windows Arial (capitalized)
+                "DejaVuSans.ttf",  # Linux DejaVu Sans
+                "LiberationSans-Regular.ttf",  # Linux Liberation Sans
+                "Helvetica.ttf",  # macOS Helvetica
+            ]
+            
+            font = None
+            for font_path in font_paths:
+                try:
+                    font = ImageFont.truetype(font_path, font_size)
+                    break
+                except:
+                    continue
+            
+            # Fallback to default font if no system fonts found
+            if font is None:
+                font = ImageFont.load_default()
+            
             self.font_cache[cache_key] = font
             return font
-        except Exception:
+            
+        except Exception as e:
+            logging.warning(f"Failed to load font {font_family} size {font_size}: {str(e)}")
             # Ultimate fallback
             font = ImageFont.load_default()
             self.font_cache[cache_key] = font
